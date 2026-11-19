@@ -29,7 +29,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
@@ -119,9 +119,11 @@ jobs:
           images: ghcr.io/${{ needs.detect-changes.outputs.owner }}/immich-server
           tags: |
             type=ref,event=branch
+            type=ref,event=tag
             type=semver,pattern={{version}}
             type=sha,prefix=sha-
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=release,enable={{is_tag}}
 
       - name: Build and push immich-server
         uses: docker/build-push-action@v6
@@ -171,9 +173,11 @@ jobs:
           images: ghcr.io/${{ needs.detect-changes.outputs.owner }}/immich-machine-learning
           tags: |
             type=ref,event=branch
+            type=ref,event=tag
             type=semver,pattern={{version}}
             type=sha,prefix=sha-
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=release,enable={{is_tag}}
 
       - name: Build and push immich-machine-learning
         uses: docker/build-push-action@v6
@@ -188,3 +192,36 @@ jobs:
           cache-to: type=gha,mode=max,scope=ml
           build-args: |
             DEVICE=cpu
+
+  create-release:
+    name: Create GitHub Release
+    needs: detect-changes
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Publish Release with Compose and Env assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          OWNER: ${{ needs.detect-changes.outputs.owner }}
+        run: |
+          sed -i "s/^IMMICH_VERSION=.*/IMMICH_VERSION=${TAG}/" docker/example.env
+          sed -i "s/^IMMICH_ML_VERSION=.*/IMMICH_ML_VERSION=${TAG}/" docker/example.env
+          gh release create "${TAG}" \
+            docker/docker-compose.yml \
+            docker/example.env \
+            --title "${TAG}" \
+            --notes "Custom Immich fork release **${TAG}**.
+
+          ### Docker Images
+          - \`ghcr.io/${OWNER}/immich-server:${TAG}\`
+          - \`ghcr.io/${OWNER}/immich-machine-learning:${TAG}\`
+
+          ### Quick Start
+          Download \`docker-compose.yml\` and \`example.env\` from the assets below, rename \`example.env\` to \`.env\`, then run:
+          \`\`\`bash
+          docker compose pull && docker compose up -d
+          \`\`\`"
