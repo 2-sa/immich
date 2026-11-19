@@ -1,0 +1,30 @@
+name: Sync Upstream Immich
+
+on:
+  workflow_dispatch:
+    inputs:
+      upstream_ref:
+        description: Upstream branch or tag from immich-app/immich
+        type: string
+        default: main
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Fetch Upstream into sync/upstream-main
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch upstream and update sync branch
+        run: |
+          git remote add upstream https://github.com/immich-app/immich.git
+          git fetch upstream "${{ inputs.upstream_ref }}"
+          git checkout -B sync/upstream-main FETCH_HEAD
+          git push origin sync/upstream-main --force
