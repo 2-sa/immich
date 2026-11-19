@@ -144,16 +144,26 @@ jobs:
             BUILD_SOURCE_COMMIT=${{ github.sha }}
 
   build-ml:
-    name: Build and Push Machine Learning
+    name: Build and Push Machine Learning (${{ matrix.device }})
     needs: detect-changes
     if: needs.detect-changes.outputs.build_ml == 'true'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - device: cpu
+            suffix: ''
+            platforms: ${{ needs.detect-changes.outputs.platforms }}
+          - device: cuda
+            suffix: '-cuda'
+            platforms: linux/amd64
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up QEMU
-        if: contains(needs.detect-changes.outputs.platforms, 'arm64')
+        if: contains(matrix.platforms, 'arm64')
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
@@ -171,6 +181,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ needs.detect-changes.outputs.owner }}/immich-machine-learning
+          flavor: |
+            suffix=${{ matrix.suffix }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -184,14 +196,14 @@ jobs:
         with:
           context: machine-learning
           file: machine-learning/Dockerfile
-          platforms: ${{ needs.detect-changes.outputs.platforms }}
+          platforms: ${{ matrix.platforms }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=ml
-          cache-to: type=gha,mode=max,scope=ml
+          cache-from: type=gha,scope=ml-${{ matrix.device }}
+          cache-to: type=gha,mode=max,scope=ml-${{ matrix.device }}
           build-args: |
-            DEVICE=cpu
+            DEVICE=${{ matrix.device }}
 
   create-release:
     name: Create GitHub Release
@@ -211,20 +223,28 @@ jobs:
           sed -i "s/^IMMICH_VERSION=.*/IMMICH_VERSION=${TAG}/" docker/example.env
           sed -i "s/^IMMICH_ML_VERSION=.*/IMMICH_ML_VERSION=${TAG}/" docker/example.env
           if gh release view "${TAG}" >/dev/null 2>&1; then
-            gh release upload "${TAG}" docker/docker-compose.yml docker/example.env --clobber
+            gh release upload "${TAG}" \
+              docker/docker-compose.yml \
+              docker/example.env \
+              docker/hwaccel.ml.yml \
+              docker/hwaccel.transcoding.yml \
+              --clobber
           else
             gh release create "${TAG}" \
               docker/docker-compose.yml \
               docker/example.env \
+              docker/hwaccel.ml.yml \
+              docker/hwaccel.transcoding.yml \
               --title "${TAG}" \
               --notes "Custom Immich fork release **${TAG}**.
 
           ### Docker Images
           - \`ghcr.io/${OWNER}/immich-server:${TAG}\`
-          - \`ghcr.io/${OWNER}/immich-machine-learning:${TAG}\`
+          - \`ghcr.io/${OWNER}/immich-machine-learning:${TAG}\` (CPU)
+          - \`ghcr.io/${OWNER}/immich-machine-learning:${TAG}-cuda\` (NVIDIA GPU)
 
           ### Quick Start
-          Download \`docker-compose.yml\` and \`example.env\` from the assets below, rename \`example.env\` to \`.env\`, then run:
+          Download \`docker-compose.yml\`, \`example.env\`, \`hwaccel.ml.yml\`, and \`hwaccel.transcoding.yml\` from the assets below, rename \`example.env\` to \`.env\`, then run:
           \`\`\`bash
           docker compose pull && docker compose up -d
           \`\`\`"
