@@ -35,7 +35,7 @@ class TextModel[O: Options](InferenceModel[O]):
             log.info(f"Downloading {self.model_type} model '{self.model_name}' from '{base_model}' to {self.model_dir}.")
             snapshot_download(
                 f"{settings.model_organization}/{base_model}",
-                revision=settings.model_revision,
+                revision="v2",
                 cache_dir=self.cache_dir,
                 local_dir=self.cache_dir,
                 allow_patterns=["detection/*"],
