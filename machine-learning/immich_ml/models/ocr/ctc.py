@@ -1,11 +1,22 @@
 from collections.abc import Callable, Sequence
 from pathlib import Path
+import re
 from typing import Any, Self
 
 import numpy as np
 from numpy.typing import NDArray
 
 from immich_ml.models.transforms import widen
+
+_ARABIC_CHAR_RE = re.compile(r"[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]")
+_LTR_RUN_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9.,:/_-]*[A-Za-z0-9])?")
+
+
+def normalize_rtl_ocr_text(text: str) -> str:
+    if not _ARABIC_CHAR_RE.search(text):
+        return text
+    reversed_text = text[::-1]
+    return _LTR_RUN_RE.sub(lambda match: match.group(0)[::-1], reversed_text)
 
 
 def picked(indices: NDArray[np.int32], confidence: NDArray[Any]) -> tuple[NDArray[np.int32], NDArray[np.float32]]:

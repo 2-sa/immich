@@ -12,7 +12,7 @@ from immich_ml.config import settings
 from immich_ml.schemas import ModelGraph, ModelSession, ModelTask, ModelType, Shape, TextRecognitionOptions
 from immich_ml.sessions.policy import ShapePolicy, batches, runs
 
-from .ctc import GREEDY, CtcDecoder, probabilities
+from .ctc import GREEDY, CtcDecoder, normalize_rtl_ocr_text, probabilities
 from .legacy import TextModel
 from .schemas import TextDetectionOutput, TextRecognitionOutput
 
@@ -96,8 +96,9 @@ class TextRecognizer(TextModel[TextRecognitionOptions]):
             if self.decoder is None:
                 self.decoder = self._decoder(session)
             chunk_texts, chunk_scores = self.decoder(outputs)
+            is_arabic = self.model_name.startswith("ARABIC__")
             for index, text, score in zip(chunk, chunk_texts, chunk_scores):
-                text_list[index] = text
+                text_list[index] = normalize_rtl_ocr_text(text) if is_arabic else text
                 score_list[index] = score
 
         boxes[:, :, 0] /= img.width

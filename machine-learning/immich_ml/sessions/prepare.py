@@ -38,16 +38,29 @@ def prepare(spec: GraphSpec) -> None:
     spec.manifest.write_text(manifest.model_dump_json())  # last, so that it means complete
 
 
+def _is_legacy_opset(model_path: Path) -> bool:
+    model = onnx.load(model_path.as_posix(), load_external_data=False)
+    return any(opset.domain in ("", "ai.onnx") and opset.version < 14 for opset in model.opset_import)
+
+
 def narrowed(spec: GraphSpec) -> Path:
-    if not spec.half:
+    if not spec.half or _is_legacy_opset(spec.model_path):
         return spec.model_path
     destination = spec.directory / "model_fp16.onnx"
-    derive(spec.model_path, destination)
+    try:
+        derive(spec.model_path, destination)
+    except Exception:
+        return spec.model_path
     return destination
 
 
 def rewritten(spec: GraphSpec, graph: Path) -> Path:
-    written: Path = graph if settings.legacy_models else apply_rewrites(graph, spec.plan)
+    if settings.legacy_models or _is_legacy_opset(graph):
+        return graph
+    try:
+        written: Path = apply_rewrites(graph, spec.plan)
+    except Exception:
+        return graph
     return written
 
 

@@ -2621,3 +2621,33 @@ class TestPredictionEndpoints:
             assert actual["box"][box] == pytest.approx(
                 expected["box"][8 * expected_line : 8 * expected_line + 8], abs=0.01
             )
+
+
+class TestArabicOCR:
+    def test_arabic_models_registered(self) -> None:
+        from immich_ml.models.constants import get_model_source
+        from immich_ml.schemas import ModelSource
+
+        assert get_model_source("ARABIC__PP-OCRv5_mobile") == ModelSource.PADDLE
+        assert get_model_source("ARABIC__PP-OCRv5_server") == ModelSource.PADDLE
+
+    def test_extract_charset_from_paddle_yml(self, tmp_path: Path) -> None:
+        from immich_ml.models.ocr.legacy import extract_charset_from_paddle_yml
+
+        yml_path = tmp_path / "inference.yml"
+        out_path = tmp_path / "recognition" / "charset.txt"
+        yml_path.write_text("PostProcess:\n  character_dict:\n    - 'ا'\n    - 'ب'\n    - '1'\n", encoding="utf-8")
+
+        extract_charset_from_paddle_yml(yml_path, out_path)
+
+        assert out_path.read_text(encoding="utf-8").splitlines() == ["ا", "ب", "1"]
+
+    def test_normalize_rtl_ocr_text(self) -> None:
+        from immich_ml.models.ocr.ctc import normalize_rtl_ocr_text
+
+        assert normalize_rtl_ocr_text("ابحرم") == "مرحبا"
+        assert normalize_rtl_ocr_text("2026 ابحرم") == "مرحبا 2026"
+        assert normalize_rtl_ocr_text("Immich ابحرم") == "مرحبا Immich"
+        assert normalize_rtl_ocr_text("Immich 2026") == "Immich 2026"
+        assert normalize_rtl_ocr_text("مكب ابحرم") == "مرحبا بكم"
+        assert normalize_rtl_ocr_text("2026/11/19 ةروتاف") == "فاتورة 2026/11/19"
