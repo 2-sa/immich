@@ -1,18 +1,15 @@
 #
-# WARNING: To install Immich, follow our guide: https://docs.immich.app/install/docker-compose
+# Immich Fork Docker Compose (https://github.com/2-sa/immich)
 #
-# Make sure to use the docker-compose.yml of the current release:
-#
-# https://github.com/immich-app/immich/releases/latest/download/docker-compose.yml
-#
-# The compose file on main may not be compatible with the latest release.
+# Pulls custom images published from this fork via GitHub Container Registry (GHCR).
+# Configure IMMICH_VERSION, IMMICH_IMAGE_OWNER, and paths in .env (copy from example.env).
 
 name: immich
 
 services:
   immich-server:
     container_name: immich_server
-    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+    image: ghcr.io/${IMMICH_IMAGE_OWNER:-2-sa}/immich-server:${IMMICH_VERSION:-main}
     # extends:
     #   file: hwaccel.transcoding.yml
     #   service: cpu # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
@@ -34,8 +31,8 @@ services:
   immich-machine-learning:
     container_name: immich_machine_learning
     # For hardware acceleration, add one of -[armnn, cuda, rocm, openvino, rknn] to the image tag.
-    # Example tag: ${IMMICH_VERSION:-release}-cuda
-    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
+    # Example tag: ${IMMICH_ML_VERSION:-main}-cuda
+    image: ghcr.io/${IMMICH_ML_IMAGE_OWNER:-2-sa}/immich-machine-learning:${IMMICH_ML_VERSION:-${IMMICH_VERSION:-main}}
     # extends: # uncomment this section for hardware acceleration - see https://docs.immich.app/features/ml-hardware-acceleration
     #   file: hwaccel.ml.yml
     #   service: cpu # set to one of [armnn, cuda, rocm, openvino, openvino-wsl, rknn] for accelerated inference - use the `-wsl` version for WSL2 where applicable
