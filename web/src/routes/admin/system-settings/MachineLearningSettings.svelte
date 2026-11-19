@@ -287,6 +287,8 @@
                 value: 'PP-OCRv6_small',
               },
               { text: 'PP-OCRv6_tiny (Chinese, English and other Latin script languages)', value: 'PP-OCRv6_tiny' },
+              { text: 'PP-OCRv5_server (Arabic and English)', value: 'ARABIC__PP-OCRv5_server' },
+              { text: 'PP-OCRv5_mobile (Arabic and English)', value: 'ARABIC__PP-OCRv5_mobile' },
               { text: 'PP-OCRv5_server (Chinese, Japanese and English)', value: 'PP-OCRv5_server' },
               { text: 'PP-OCRv5_mobile (Chinese, Japanese and English)', value: 'PP-OCRv5_mobile' },
               { text: 'PP-OCRv5_mobile (English-only)', value: 'EN__PP-OCRv5_mobile' },
