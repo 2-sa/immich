@@ -45,9 +45,11 @@ export class ServerService extends BaseService {
     const buildVersions = await this.serverInfoRepository.getBuildVersions();
     const licensed = await this.systemMetadataRepository.get(SystemMetadataKey.License);
 
+    const repositoryUrl = buildMetadata.repositoryUrl || 'https://github.com/2-sa/immich';
+
     return {
       version,
-      versionUrl: `https://github.com/immich-app/immich/releases/tag/${version}`,
+      versionUrl: `${repositoryUrl}/releases/tag/${version}`,
       licensed: !!licensed,
       ...buildMetadata,
       ...buildVersions,

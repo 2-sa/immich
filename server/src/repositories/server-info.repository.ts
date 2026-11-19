@@ -55,27 +55,27 @@ export class ServerInfoRepository {
     this.logger.setContext(ServerInfoRepository.name);
   }
 
-  async getLatestRelease(channel: ReleaseChannel): Promise<VersionResponse> {
+  async getLatestRelease(_channel: ReleaseChannel): Promise<VersionResponse> {
     try {
-      const { versionCheck } = this.configRepository.getEnv();
-      const url = new URL(versionCheck.url);
-      switch (channel) {
-        case ReleaseChannel.Stable: {
-          url.searchParams.append('channel', 'stable');
-          break;
-        }
-        case ReleaseChannel.ReleaseCandidate: {
-          url.searchParams.append('channel', 'rc');
-          break;
-        }
-      }
-      const response = await fetch(url);
+      const { buildMetadata } = this.configRepository.getEnv();
+      const repository = buildMetadata.repository || '2-sa/immich';
+      const url = new URL(`https://api.github.com/repos/${repository}/releases/latest`);
+      const response = await fetch(url, {
+        headers: {
+          Accept: 'application/vnd.github+json',
+          'User-Agent': 'immich-server',
+        },
+      });
 
       if (!response.ok) {
         throw new Error(`Version check request failed with status ${response.status}: ${await response.text()}`);
       }
 
-      return response.json();
+      const data = (await response.json()) as { tag_name: string; published_at: string };
+      return {
+        version: data.tag_name,
+        published_at: data.published_at,
+      };
     } catch (error) {
       throw new Error('Failed to fetch latest release', { cause: error });
     }
