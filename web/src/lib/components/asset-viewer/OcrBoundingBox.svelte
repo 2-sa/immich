@@ -58,6 +58,7 @@
   tabindex="0"
   role="button"
   aria-label={ocrBox.text}
+  dir="auto"
   onselectstart={isTouch ? handleSelectStart : undefined}
 >
   {ocrBox.text}
