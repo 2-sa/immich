@@ -385,7 +385,17 @@ const isCJK = (c: number): boolean =>
   (c >= 0x30_a0 && c <= 0x30_ff) ||
   (c >= 0x34_00 && c <= 0x4d_bf);
 
-export const tokenizeForSearch = (text: string): string[] => {
+const normalizeArabicForSearch = (text: string): string =>
+  text
+    .replaceAll(/[\u0640\u064B-\u065F\u0670]/g, '')
+    .replaceAll(/[أإآٱ]/g, 'ا')
+    .replaceAll('ى', 'ي')
+    .replaceAll('ة', 'ه')
+    .replaceAll(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 0x0660))
+    .replaceAll(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 0x06f0));
+
+export const tokenizeForSearch = (rawText: string): string[] => {
+  const text = normalizeArabicForSearch(rawText);
   /* eslint-disable unicorn/prefer-code-point */
   const tokens: string[] = [];
   let i = 0;

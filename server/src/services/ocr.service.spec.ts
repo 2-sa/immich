@@ -248,6 +248,19 @@ describe(OcrService.name, () => {
         expect(mocks.ocr.upsert).toHaveBeenCalledWith(asset.id, expect.any(Array), 'Hello World');
       });
 
+      it('should normalize Arabic letters, diacritics, and numerals while keeping raw text', async () => {
+        const asset = AssetFactory.create();
+        mockOcrResult('أحمد مَدْرَسَةٌ على ٢٠٢٦');
+
+        await sut.handleOcr({ id: asset.id });
+
+        expect(mocks.ocr.upsert).toHaveBeenCalledWith(
+          asset.id,
+          [expect.objectContaining({ text: 'أحمد مَدْرَسَةٌ على ٢٠٢٦' })],
+          'احمد مدرسه علي 2026',
+        );
+      });
+
       it('should handle mixed CJK and Latin text', async () => {
         const asset = AssetFactory.create();
         mockOcrResult('機器學習Model');
